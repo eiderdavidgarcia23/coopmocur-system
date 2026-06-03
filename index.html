@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>COOPMOCUR - Gestión de Inventario</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans antialiased">
+
+    <header class="bg-blue-800 text-white p-4 shadow-md sticky top-0 z-50 flex justify-between items-center">
+        <div>
+            <h1 class="text-lg font-black tracking-wider text-amber-400">COOPMOCUR 🛺</h1>
+            <p class="text-[10px] text-blue-200 font-medium font-mono">CONTROL DE REPUESTOS</p>
+        </div>
+        <div id="fecha-actual" class="text-xs font-semibold bg-blue-900 px-3 py-1.5 rounded-full border border-blue-700"></div>
+    </header>
+
+    <nav class="bg-white shadow-md border-b border-slate-200 sticky top-[60px] z-40">
+        <div class="container mx-auto flex justify-around text-center text-xs font-bold tracking-tight">
+            <button onclick="irAPestaña('inventario')" id="tab-inventario" class="w-full py-3.5 text-blue-700 border-b-4 border-blue-700">📋 STOCK</button>
+            <button onclick="irAPestaña('entradas')" id="tab-entradas" class="w-full py-3.5 text-slate-500 hover:text-blue-700">📥 ENTRADAS</button>
+            <button onclick="irAPestaña('ventas')" id="tab-ventas" class="w-full py-3.5 text-slate-500 hover:text-blue-700">💸 VENTAS</button>
+            <button onclick="irAPestaña('historial')" id="tab-historial" class="w-full py-3.5 text-slate-500 hover:text-blue-700">📜 HISTORIAL</button>
+        </div>
+    </nav>
+
+    <main class="p-4 max-w-xl mx-auto space-y-4 mb-20">
+
+        <section id="vista-inventario" class="space-y-3">
+            <div class="flex justify-between items-center">
+                <h2 class="text-base font-black text-slate-700 uppercase tracking-wide">Repuestos en Stock</h2>
+                <button onclick="mostrarModal(true)" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3 py-2 rounded-lg shadow-sm flex items-center gap-1">
+                    ➕ AGREGAR PIEZA
+                </button>
+            </div>
+
+            <div class="relative">
+                <input type="text" id="buscador" oninput="buscarRepuesto()" placeholder="Buscar por nombre o código de pieza..." class="w-full p-3 pl-10 bg-white border border-slate-300 rounded-xl text-sm">
+                <span class="absolute left-3.5 top-3.5 text-slate-400 text-sm">🔍</span>
+            </div>
+
+            <div id="contenedor-stock" class="space-y-2.5"></div>
+        </section>
+
+        <section id="vista-entradas" class="hidden bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+            <h2 class="text-base font-black text-slate-700 uppercase tracking-wide border-b border-slate-100 pb-2">📥 Registrar Entrada de Mercancía</h2>
+            <form id="form-entrada" onsubmit="procesarEntrada(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Seleccionar Repuesto</label>
+                    <select id="select-entrada-pieza" class="w-full p-3 bg-slate-50 border border-slate-300 rounded-xl text-sm" required></select>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Cantidad Ingresa</label>
+                        <input type="number" id="input-entrada-cantidad" min="1" class="w-full p-3 border border-slate-300 rounded-xl text-sm" required>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Costo Unitario ($)</label>
+                        <input type="number" id="input-entrada-costo" min="0" class="w-full p-3 border border-slate-300 rounded-xl text-sm" required>
+                    </div>
+                </div>
+                <button type="submit" class="w-full bg-blue-700 text-white font-bold p-3.5 rounded-xl text-sm">GUARDAR ENTRADA</button>
+            </form>
+        </section>
+
+        <section id="vista-ventas" class="hidden bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+            <h2 class="text-base font-black text-slate-700 uppercase tracking-wide border-b border-slate-100 pb-2">💸 Registrar Venta / Salida</h2>
+            <form id="form-venta" onsubmit="procesarVenta(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Seleccionar Repuesto</label>
+                    <select id="select-venta-pieza" onchange="detectarPrecioYStockSugerido()" class="w-full p-3 bg-slate-50 border border-slate-300 rounded-xl text-sm" required></select>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Cantidad a Vender</label>
+                        <input type="number" id="input-venta-cantidad" min="1" class="w-full p-3 border border-slate-300 rounded-xl text-sm" required>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Precio de Venta ($)</label>
+                        <input type="number" id="input-venta-precio" min="0" class="w-full p-3 border border-slate-300 rounded-xl text-sm" required>
+                    </div>
+                </div>
+                <div id="notificacion-stock" class="text-xs font-bold text-amber-600 bg-amber-50 p-2.5 rounded-lg border border-amber-200 hidden"></div>
+                <button type="submit" class="w-full bg-emerald-600 text-white font-bold p-3.5 rounded-xl text-sm">COMPLETAR VENTA</button>
+            </form>
+        </section>
+
+        <section id="vista-historial" class="hidden space-y-3">
+            <div class="flex justify-between items-center">
+                <h2 class="text-base font-black text-slate-700 uppercase tracking-wide">Historial de Movimientos</h2>
+                <button onclick="vaciarKardex()" class="text-xs text-red-600 font-bold hover:underline">Limpiar Todo</button>
+            </div>
+            <div id="contenedor-historial" class="space-y-2"></div>
+        </section>
+
+    </main>
+
+    <div id="modal-nueva-pieza" class="hidden fixed inset-0 bg-slate-900/60 flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-2xl p-5 w-full max-w-sm shadow-2xl space-y-4">
+            <h3 class="text-base font-black text-slate-800 uppercase">Nuevo Repuesto</h3>
+            <form id="form-nuevo-repuesto" onsubmit="agregarRepuestoCatalogo(event)" class="space-y-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-0.5">Nombre de la Pieza</label>
+                    <input type="text" id="reg-nombre" class="w-full p-2.5 border border-slate-300 rounded-xl text-sm" required>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-0.5">Código / Referencia</label>
+                    <input type="text" id="reg-codigo" class="w-full p-2.5 border border-slate-300 rounded-xl text-sm uppercase font-mono" required>
+                </div>
+                <div class="grid grid-cols-2 gap-2.5">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-0.5">Stock Inicial</label>
+                        <input type="number" id="reg-stock" value="0" min="0" class="w-full p-2.5 border border-slate-300 rounded-xl text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-0.5">Precio de Venta ($)</label>
+                        <input type="number" id="reg-precio" value="0" min="0" class="w-full p-2.5 border border-slate-300 rounded-xl text-sm">
+                    </div>
+                </div>
+                <div class="flex justify-end gap-2 pt-3">
+                    <button type="button" onclick="mostrarModal(false)" class="px-4 py-2 bg-slate-100 text-slate-600 font-bold text-xs rounded-lg">CANCELAR</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-700 text-white font-bold text-xs rounded-lg">REGISTRAR</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
+
