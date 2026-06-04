@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <title>COOPMOCUR - Sistema Integral</title>
+</head>
+<body class="bg-gray-100 font-sans antialiased">
+
+    <!-- ENCABEZADO -->
+    <div class="bg-blue-800 p-4 text-white shadow-md">
+        <div class="flex justify-between items-center">
+            <h1 class="text-xl font-bold flex items-center gap-2">COOPMOCUR 🛺</h1>
+            <span class="bg-blue-900 px-3 py-1 rounded-full text-xs font-bold">SISTEMA CONTROL</span>
+        </div>
+        <p class="text-xs opacity-80 mt-1">MÓDULO INTEGRAL DE REPUESTOS</p>
+    </div>
+
+    <!-- MENÚ DE APARTADOS -->
+    <div class="flex bg-white shadow-md text-sm font-bold text-gray-600 sticky top-0 z-10">
+        <button onclick="cambiarPestana('STOCK')" id="btn-STOCK" class="flex-1 text-center py-3 border-b-2 border-blue-600 text-blue-800">STOCK</button>
+        <button onclick="cambiarPestana('ENTRADAS')" id="btn-ENTRADAS" class="flex-1 text-center py-3">ENTRADAS</button>
+        <button onclick="cambiarPestana('VENTAS')" id="btn-VENTAS" class="flex-1 text-center py-3">VENTAS</button>
+        <button onclick="cambiarPestana('HISTORIAL')" id="btn-HISTORIAL" class="flex-1 text-center py-3">HISTORIAL</button>
+    </div>
+
+    <!-- CONTENEDOR DINÁMICO -->
+    <div class="p-4 max-w-xl mx-auto" id="contenido-principal"></div>
+
+    <!-- CUADRO FLOTANTE (MODAL DE AGREGAR PIEZA) -->
+    <div id="modal-agregar" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-md p-6 space-y-4">
+            <h3 class="text-lg font-bold text-gray-800">Registrar Nuevo Repuesto</h3>
+            <div>
+                <label class="block text-xs font-bold text-gray-500 mb-1">NOMBRE DE LA PIEZA</label>
+                <input type="text" id="ins-nombre" placeholder="Ej. Kit de arrastre, Bujía..." class="w-full p-3 border rounded-lg bg-gray-50 text-sm">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-500 mb-1">PRECIO DE VENTA ($)</label>
+                <input type="number" id="ins-precio" placeholder="Ej. 15000" class="w-full p-3 border rounded-lg bg-gray-50 text-sm">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-gray-500 mb-1">CANTIDAD DISPONIBLE</label>
+                <input type="number" id="ins-cantidad" placeholder="Ej. 10" class="w-full p-3 border rounded-lg bg-gray-50 text-sm">
+            </div>
+            <div class="flex gap-3 pt-2">
+                <button onclick="cerrarModalAgregar()" class="flex-1 bg-gray-200 text-gray-700 p-3 rounded-lg font-bold text-sm">Cancelar</button>
+                <button onclick="procesarGuardarPieza()" class="flex-1 bg-emerald-600 text-white p-3 rounded-lg font-bold text-sm">Guardar Pieza</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let inventario = JSON.parse(localStorage.getItem('coop_inventario')) || [];
+        let historial = JSON.parse(localStorage.getItem('coop_historial')) || [];
+        let pestanaActual = 'STOCK';
+
+        function cambiarPestana(pestana) {
+            pestanaActual = pestana;
+            document.querySelectorAll('button[id^="btn-"]').forEach(btn => {
+                btn.classList.remove('border-b-2', 'border-blue-600', 'text-blue-800');
+            });
+            document.getElementById('btn-' + pestana).classList.add('border-b-2', 'border-blue-600', 'text-blue-800');
+            renderizar();
+        }
+
+        function renderizar() {
+            const container = document.getElementById('contenido-principal');
+            let html = '';
+
+            if (pestanaActual === 'STOCK') {
+                html = `
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="font-bold text-lg text-gray-700">REPUESTOS EN STOCK</h2>
+                        <button onclick="abrirModalAgregar()" class="bg-emerald-600 text-white px-4 py-2 rounded-lg font-bold text-sm">+ AGREGAR PIEZA</button>
+                    </div>
+                    <input type="text" id="busqueda" onkeyup="filtrarStock()" placeholder="Buscar por nombre de pieza..." class="w-full p-3 rounded-lg border border-gray-300 mb-4 shadow-sm text-sm">
+                    <div id="lista-stock" class="space-y-3">
+                        ${generarListaStock(inventario)}
+                    </div>
+                `;
+            } 
+            else if (pestanaActual === 'ENTRADAS') {
+                html = `
+                    <h2 class="font-bold text-lg text-gray-700 mb-4">REGISTRAR ENTRADA DE STOCK</h2>
+                    <div class="bg-white p-4 rounded-lg shadow space-y-3">
+                        <label class="block text-sm font-medium text-gray-600">Seleccionar Repuesto</label>
+                        <select id="select-entrada" class="w-full p-3 border rounded-lg bg-gray-50 text-sm">
+                            ${inventario.map(r => `<option value="${r.id}">${r.nombre} (Actual: ${r.cantidad})</option>`).join('') || '<option>No hay repuestos registrados</option>'}
+                        </select>
+                        <input type="number" id="cant-entrada" placeholder="Cantidad que ingresa" class="w-full p-3 border rounded-lg text-sm">
+                        <button onclick="procesarEntrada()" class="w-full bg-blue-600 text-white p-3 rounded-lg font-bold text-sm">SUMAR AL STOCK</button>
+                    </div>
+                `;
+            } 
+            else if (pestanaActual === 'VENTAS') {
+                html = `
+                    <h2 class="font-bold text-lg text-gray-700 mb-4">REGISTRAR NUEVA VENTA (SALIDA)</h2>
+                    <div class="bg-white p-4 rounded-lg shadow space-y-3">
+                        <label class="block text-sm font-medium text-gray-600">Seleccionar Repuesto a Vender</label>
+                        <select id="select-venta" class="w-full p-3 border rounded-lg bg-gray-50 text-sm">
+                            ${inventario.map(r => `<option value="${r.id}">${r.nombre} - $${r.precio} (Disp: ${r.cantidad})</option>`).join('') || '<option>No hay repuestos registrados</option>'}
+                        </select>
+                        <input type="number" id="cant-venta" placeholder="Cantidad a vender" class="w-full p-3 border rounded-lg text-sm">
+                        <button onclick="procesarVenta()" class="w-full bg-emerald-600 text-white p-3 rounded-lg font-bold text-sm">CONFIRMAR VENTA</button>
+                    </div>
+                `;
+            } 
+            else if (pestanaActual === 'HISTORIAL') {
+                html = `
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="font-bold text-lg text-gray-700">HISTORIAL DE MOVIMIENTOS</h2>
+                        <button onclick="limpiarHistorial()" class="text-xs text-red-500 font-bold bg-red-50 p-2 rounded">BORRAR TODO</button>
+                    </div>
+                    <div class="bg-white rounded-lg shadow divide-y divide-gray-100 max-h-[400px] overflow-y-auto">
+                        ${historial.length === 0 ? '<p class="p-4 text-center text-gray-400 text-sm">No hay movimientos registrados.</p>' : 
+                        historial.map(h => `
+                            <div class="p-3 text-xs flex justify-between items-center">
+                                <div>
+                                    <span class="font-bold ${h.tipo === 'ENTRADA' ? 'text-blue-600' : 'text-emerald-600'}">[${h.tipo}]</span>
+                                    <span class="text-gray-800 font-medium ml-1">${h.detalle}</span>
+                                </div>
+                                <span class="text-gray-400 font-mono">${h.fecha}</span>
+                            </div>
+                        `).reverse().join('')}
+                    </div>
+                `;
+            }
+
+            container.innerHTML = html;
+        }
+
+        function generarListaStock(lista) {
+            if (lista.length === 0) {
+                return '<div class="border-2 border-dashed border-gray-300 p-10 text-center text-gray-500 rounded-lg bg-white">No hay repuestos en el sistema.</div>';
+            }
+            return lista.map(r => `
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex justify-between items-center">
+                    <div>
+                        <h4 class="font-bold text-gray-800 text-base uppercase">${r.nombre}</h4>
+                        <p class="text-sm text-gray-500 font-semibold mt-1">Precio: <span class="text-emerald-600">$${r.precio}</span></p>
+                    </div>
+                    <div class="text-right flex items-center gap-4">
+                        <div>
+                            <span class="text-xs text-gray-400 block font-bold">CANTIDAD</span>
+                            <span class="inline-block px-3 py-1 rounded-full text-sm font-bold ${r.cantidad <= 2 ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-800'}">${r.cantidad} u.</span>
+                        </div>
+                        <button onclick="eliminarPieza(${r.id})" class="text-gray-300 hover:text-red-500 font-bold text-sm bg-gray-50 px-2 py-1 rounded">✕</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // FUNCIONES DEL CUADRO FLOTANTE INTEGRADO
+        function abrirModalAgregar() {
+            document.getElementById('ins-nombre').value = '';
+            document.getElementById('ins-precio').value = '';
+            document.getElementById('ins-cantidad').value = '';
+            document.getElementById('modal-agregar').classList.remove('hidden');
+        }
+
+        function cerrarModalAgregar() {
+            document.getElementById('modal-agregar').classList.add('hidden');
+        }
+
+        function procesarGuardarPieza() {
+            const nombre = document.getElementById('ins-nombre').value;
+            const precio = parseFloat(document.getElementById('ins-precio').value);
+            const cantidad = parseInt(document.getElementById('ins-cantidad').value);
+
+            if (!nombre || isNaN(precio) || isNaN(cantidad)) {
+                alert("Por favor rellena todos los campos con datos válidos.");
+                return;
+            }
+
+            const nuevo = { id: Date.now(), nombre, precio, cantidad };
+            inventario.push(nuevo);
+            
+            registrarHistorial("ENTRADA", `Creación de item: ${nombre} (${cantidad} unidades)`);
+            guardarDatos();
+            cerrarModalAgregar();
+            renderizar();
+        }
+
+        function procesarEntrada() {
+            const id = document.getElementById('select-entrada').value;
+            const cant = parseInt(document.getElementById('cant-entrada').value);
+            if (!id || isNaN(cant) || cant <= 0) return alert("Ingresa datos válidos");
+
+            const item = inventario.find(r => r.id == id);
+            if (item) {
+                item.cantidad += cant;
+                registrarHistorial("ENTRADA", `Surtido: +${cant} unidades de ${item.nombre}`);
+                guardarDatos();
+                cambiarPestana('STOCK');
+            }
+        }
+
+        function procesarVenta() {
+            const id = document.getElementById('select-venta').value;
+            const cant = parseInt(document.getElementById('cant-venta').value);
+            if (!id || isNaN(cant) || cant <= 0) return alert("Ingresa datos válidos");
+
+            const item = inventario.find(r => r.id == id);
+            if (item) {
+                if (item.cantidad < cant) return alert("¡No hay suficiente Stock disponible!");
+                item.cantidad -= cant;
+                registrarHistorial("VENTA", `Vendido: ${cant} unidades de ${item.nombre} (Total: $${cant * item.precio})`);
+                guardarDatos();
+                cambiarPestana('STOCK');
+            }
+        }
+
+        function filtrarStock() {
+            const busqueda = document.getElementById('busqueda').value.toLowerCase();
+            const filtrados = inventario.filter(r => r.nombre.toLowerCase().includes(busqueda));
+            document.getElementById('lista-stock').innerHTML = generarListaStock(filtrados);
+        }
+
+        function eliminarPieza(id) {
+            if(confirm("¿Seguro que deseas eliminar este repuesto del inventario por completo?")) {
+                inventario = inventario.filter(r => r.id != id);
+                guardarDatos();
+                renderizar();
+            }
+        }
+
+        function guardarDatos() {
+            localStorage.setItem('coop_inventario', JSON.stringify(inventario));
+            localStorage.setItem('coop_historial', JSON.stringify(historial));
+        }
+
+        function registrarHistorial(tipo, detalle) {
+            const ahora = new Date();
+            const fechaStr = `${ahora.getHours()}:${ahora.getMinutes().toString().padStart(2,'0')}`;
+            historial.push({ tipo, detalle, fecha: fechaStr });
+        }
+
+        function limpiarHistorial() {
+            if(confirm("¿Borrar historial?")) { historial = []; guardarDatos(); renderizar(); }
+        }
+
+        renderizar();
+    </script>
+</body>
+</html>
+
