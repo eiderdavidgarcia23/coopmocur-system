@@ -61,7 +61,11 @@ body{background:#f1f5f9;min-height:100vh;color:#1e293b}
 @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 .fade{animation:fadeIn 0.2s ease}
 </style>
-</head>
+
+<style id="toast-style">
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:#1e293b;color:#fff;padding:12px 22px;border-radius:12px;font-size:0.85rem;font-weight:600;z-index:9999;opacity:0;transition:all 0.3s ease;pointer-events:none;white-space:nowrap}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style></head>
 <body>
 
 <div class="header">
@@ -153,9 +157,9 @@ function vistaEntradas(){
 function procesarEntrada(){
   const key=document.getElementById('select-entrada').value;
   const cant=parseInt(document.getElementById('cant-entrada').value);
-  if(!key||isNaN(cant)||cant<=0) return alert('Ingresa datos válidos');
+  if(!key||isNaN(cant)||cant<=0) return toast('⚠️ Ingresa datos válidos');
   const item=inventario.find(r=>r._key===key);
-  if(item){window.actualizarEnFirebase(key,{cantidad:item.cantidad+cant});registrarHistorial('ENTRADA','Surtido: +'+cant+' u. de '+item.nombre);alert('✅ Stock actualizado.');cambiarPestana('STOCK');}
+  if(item){window.actualizarEnFirebase(key,{cantidad:item.cantidad+cant});registrarHistorial('ENTRADA','Surtido: +'+cant+' u. de '+item.nombre);toast('✅ Stock actualizado.');cambiarPestana('STOCK');}
 }
 
 function vistaVentas(){
@@ -166,13 +170,13 @@ function vistaVentas(){
 function procesarVenta(){
   const key=document.getElementById('select-venta').value;
   const cant=parseInt(document.getElementById('cant-venta').value);
-  if(!key||isNaN(cant)||cant<=0) return alert('Ingresa datos válidos');
+  if(!key||isNaN(cant)||cant<=0) return toast('⚠️ Ingresa datos válidos');
   const item=inventario.find(r=>r._key===key);
   if(item){
-    if(item.cantidad<cant) return alert('❌ Stock insuficiente. Solo hay '+item.cantidad+' u.');
+    if(item.cantidad<cant) return toast('❌ Stock insuficiente: '+item.cantidad+' u.');
     window.actualizarEnFirebase(key,{cantidad:item.cantidad-cant});
     registrarHistorial('VENTA','Vendido: '+cant+' u. de '+item.nombre+' (Total: $'+(cant*item.precio).toLocaleString()+')');
-    alert('🎉 Venta registrada.');cambiarPestana('STOCK');
+    toast('🎉 Venta registrada.');cambiarPestana('STOCK');
   }
 }
 
@@ -200,7 +204,7 @@ function procesarGuardarPieza(){
   const nombre=document.getElementById('ins-nombre').value.trim();
   const precio=parseFloat(document.getElementById('ins-precio').value);
   const cantidad=parseInt(document.getElementById('ins-cantidad').value);
-  if(!nombre||isNaN(precio)||isNaN(cantidad)) return alert('Rellena todos los campos.');
+  if(!nombre||isNaN(precio)||isNaN(cantidad)) return toast('⚠️ Rellena todos los campos.');
   window.guardarEnFirebase({nombre,precio,cantidad});
   cerrarModalAgregar();
 }
@@ -220,7 +224,7 @@ function procesarEditarPieza(){
   const nombre=document.getElementById('edit-nombre').value.trim();
   const precio=parseFloat(document.getElementById('edit-precio').value);
   const cantidad=parseInt(document.getElementById('edit-cantidad').value);
-  if(!nombre||isNaN(precio)||isNaN(cantidad)) return alert('Rellena todos los campos.');
+  if(!nombre||isNaN(precio)||isNaN(cantidad)) return toast('⚠️ Rellena todos los campos.');
   window.actualizarEnFirebase(key,{nombre,precio,cantidad});
   cerrarModalEditar();
 }
@@ -234,6 +238,17 @@ window.actualizarInventarioDesdeFirebase=function(lista){inventario=lista;render
 renderizar();
 </script>
 
+
+<script>
+function toast(msg){
+  let t=document.getElementById('toast');
+  if(!t){t=document.createElement('div');t.id='toast';document.body.appendChild(t);}
+  t.textContent=msg;
+  t.classList.add('show');
+  clearTimeout(window._toastTimer);
+  window._toastTimer=setTimeout(()=>t.classList.remove('show'),2800);
+}
+</script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
 import { getDatabase, ref, push, remove, update, onValue } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-database.js";
