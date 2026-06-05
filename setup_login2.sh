@@ -1,3 +1,80 @@
+#!/bin/bash
+DEST=~/coopmocur-system
+echo ""
+echo "================================"
+echo "  COOPMOCUR — Instalando Login2 "
+echo "================================"
+
+cat > "$DEST/firebase-db.js" << 'FBEOF'
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
+import { getDatabase, ref, push, remove, update, onValue, get } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-database.js";
+
+const app = initializeApp({ databaseURL: "https://coopmocur-default-rtdb.firebaseio.com" });
+const db = getDatabase(app);
+const repuestosRef = ref(db, 'repuestos');
+const usuariosRef = ref(db, 'usuarios');
+
+window.guardarEnFirebase = (nuevo) => push(repuestosRef, nuevo);
+window.eliminarDeFirebase = (key) => remove(ref(db, 'repuestos/' + key));
+window.actualizarEnFirebase = (key, cambios) => update(ref(db, 'repuestos/' + key), cambios);
+
+onValue(repuestosRef, (snapshot) => {
+    const data = snapshot.val();
+    const lista = data ? Object.entries(data).map(([k,v]) => ({...v, _key:k})) : [];
+    if (window.actualizarInventarioDesdeFirebase) window.actualizarInventarioDesdeFirebase(lista);
+});
+
+window.loginConFirebase = async function(usuario, password) {
+    try {
+        const snap = await get(usuariosRef);
+        const data = snap.val();
+        if (!data) return null;
+        const entrada = Object.entries(data).find(([k,v]) => 
+            v.usuario === usuario.toLowerCase() && v.password === password
+        );
+        if (!entrada) return null;
+        return { ...entrada[1], _key: entrada[0] };
+    } catch(e) {
+        console.error('Login error:', e);
+        return null;
+    }
+};
+
+window.crearUsuarioEnFirebase = async function(usuario, password, rol, nombre) {
+    try {
+        const snap = await get(usuariosRef);
+        const data = snap.val() || {};
+        const existe = Object.values(data).some(u => u.usuario === usuario.toLowerCase());
+        if (existe) return { ok: false, msg: 'El usuario ya existe' };
+        await push(usuariosRef, { usuario: usuario.toLowerCase(), password, rol, nombre, creado: new Date().toLocaleDateString('es-ES') });
+        return { ok: true };
+    } catch(e) {
+        return { ok: false, msg: 'Error al crear usuario' };
+    }
+};
+
+window.eliminarUsuarioDeFirebase = (key) => remove(ref(db, 'usuarios/' + key));
+
+window.obtenerUsuarios = async function() {
+    const snap = await get(usuariosRef);
+    const data = snap.val() || {};
+    return Object.entries(data).map(([k,v]) => ({...v, _key:k}));
+};
+
+// Crear admin Eider por defecto
+get(usuariosRef).then(snap => {
+    const data = snap.val() || {};
+    const tieneAdmin = Object.values(data).some(u => u.usuario === 'eider');
+    if (!tieneAdmin) {
+        push(usuariosRef, { usuario: 'eider', password: '1234', rol: 'admin', nombre: 'Eider', creado: new Date().toLocaleDateString('es-ES') });
+    }
+});
+
+window.firebaseReady = true;
+FBEOF
+echo "✅ firebase-db.js actualizado"
+
+cat > "$DEST/index.html" << 'HTMLEOF'
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -104,20 +181,7 @@ body{background:#f8fafc;min-height:100vh;color:#1e293b}
   <div class="login-bg">
     <div class="login-box">
       <div class="login-logo">
-        <div class="login-icon"><svg width="80" height="60" viewBox="0 0 80 60" xmlns="http://www.w3.org/2000/svg">
-  < Sombra -->  <ellipse cx="42" cy="57" rx="28" ry="4" fill="rgba(0,0,0,0.15)"/>
-  < Cabina techo -->  <rect x="18" y="10" width="38" height="22" rx="8" fill="#1e3a8a"/>
-  < Franja blanca lateral -->  <rect x="18" y="22" width="38" height="6" fill="#fff" opacity="0.3"/>
-  < Parabrisas -->  <rect x="22" y="13" width="16" height="12" rx="3" fill="#7dd3fc" opacity="0.9"/>
-  < Parte trasera -->  <rect x="10" y="24" width="50" height="18" rx="5" fill="#1d4ed8"/>
-  < Franja blanca carrocería -->  <rect x="10" y="28" width="50" height="5" fill="#fff" opacity="0.25"/>
-  < Rueda delantera -->  <circle cx="22" cy="47" r="7" fill="#1e293b"/>
-  <circle cx="22" cy="47" r="3.5" fill="#94a3b8"/>
-  < Rueda trasera -->  <circle cx="55" cy="47" r="7" fill="#1e293b"/>
-  <circle cx="55" cy="47" r="3.5" fill="#94a3b8"/>
-  < Faro -->  <circle cx="14" cy="28" r="3" fill="#fde68a"/>
-  < Detalle logo -->  <rect x="34" y="16" width="14" height="6" rx="2" fill="#fff" opacity="0.15"/>
-</svg></div>
+        <div class="login-icon">🛺</div>
         <h1>COOPMOCUR</h1>
         <p>SISTEMA INTEGRAL DE REPUESTOS</p>
       </div>
@@ -476,3 +540,11 @@ window.actualizarInventarioDesdeFirebase=function(lista){
 <script type="module" src="firebase-db.js"></script>
 </body>
 </html>
+HTMLEOF
+echo "✅ index.html actualizado"
+echo "// reemplazado" > "$DEST/app.js"
+echo ""
+echo "================================"
+echo "  Instalacion completa!         "
+echo "  python -m http.server 8080    "
+echo "================================"
