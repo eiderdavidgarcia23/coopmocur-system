@@ -111,12 +111,12 @@ body{background:#f8fafc;min-height:100vh;color:#1e293b}
       <div class="login-divider"></div>
       <div id="login-error" class="login-error">Usuario o contraseña incorrectos</div>
       <div class="field-wrap">
-        <div class="field-label"><span>👤</span> Alias</div>
-        <input type="text" id="login-usuario" placeholder="Tu alias de acceso" class="field-input" autocomplete="off" autocorrect="off" autocapitalize="off">
+        <div class="field-label"><span>👤</span> Usuario</div>
+        <input type="text" id="login-usuario" placeholder="Tu usuario" class="field-input" autocomplete="off" autocorrect="off" autocapitalize="off">
       </div>
       <div class="field-wrap">
-        <div class="field-label"><span>🔒</span> Clave</div>
-        <input type="password" id="login-password" placeholder="Tu clave" class="field-input">
+        <div class="field-label"><span>🔒</span> Contraseña</div>
+        <input type="password" id="login-password" placeholder="Tu contraseña" class="field-input">
       </div>
       <button class="login-btn" id="login-btn" onclick="intentarLogin()">
         <span>→</span> Ingresar
@@ -198,6 +198,18 @@ body{background:#f8fafc;min-height:100vh;color:#1e293b}
   </div>
 </div>
 
+
+<div class="modal-overlay" id="modal-logout">
+  <div class="modal" style="text-align:center">
+    <div style="font-size:2rem;margin-bottom:8px">👋</div>
+    <h3 style="margin-bottom:8px">¿Cerrar sesión?</h3>
+    <p style="font-size:0.85rem;color:#64748b;margin-bottom:20px">Se cerrará tu sesión como <span id="logout-nombre" style="font-weight:700;color:#1e3a8a"></span></p>
+    <div class="btn-row">
+      <button class="btn btn-gray" onclick="document.getElementById('modal-logout').classList.remove('visible')">Cancelar</button>
+      <button class="btn btn-red" onclick="ejecutarLogout()" style="background:#ef4444;color:#fff">Cerrar sesión</button>
+    </div>
+  </div>
+</div>
 <div id="toast"></div>
 
 <script>
@@ -268,7 +280,8 @@ function iniciarApp() {
 }
 
 function cerrarSesion() {
-  if (confirm('¿Cerrar sesión?')) {
+  document.getElementById("modal-logout").classList.add("visible"); }
+function confirmarLogout() {  if(true) {
     usuarioActual = null;
     document.getElementById('pantalla-login').style.display = 'block';
     document.getElementById('pantalla-app').style.display = 'none';
