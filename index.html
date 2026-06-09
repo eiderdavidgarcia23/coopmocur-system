@@ -167,6 +167,17 @@ body{background:#f8fafc;min-height:100vh;color:#1e293b}
   </div>
 </div>
 
+<!-- MODAL ELIMINAR -->
+<div class="modal-overlay" id="modal-eliminar">
+  <div class="modal" style="text-align:center">
+    <h3 style="margin-bottom:8px">¿Eliminar repuesto?</h3>
+    <p style="font-size:0.85rem;color:#64748b;margin-bottom:20px" id="eliminar-nombre-texto"></p>
+    <div class="btn-row">
+      <button class="btn btn-gray" onclick="document.getElementById('modal-eliminar').classList.remove('visible')">Cancelar</button>
+      <button class="btn btn-red" onclick="confirmarEliminarPieza()" style="background:#ef4444;color:#fff">Eliminar</button>
+    </div>
+  </div>
+</div>
 <!-- MODAL EDITAR REPUESTO -->
 <div class="modal-overlay" id="modal-editar">
   <div class="modal">
@@ -487,7 +498,19 @@ function procesarEditarPieza() {
   cerrarModalEditar();
 }
 
+let _eliminarKey=null;
 function eliminarPieza(key) {
+  const item=inventario.find(r=>r._key===key);
+  if(!item) return;
+  _eliminarKey=key;
+  document.getElementById('eliminar-nombre-texto').textContent='Se eliminara: '+item.nombre;
+  document.getElementById('modal-eliminar').classList.add('visible');
+}
+function confirmarEliminarPieza() {
+  document.getElementById('modal-eliminar').classList.remove('visible');
+  if(_eliminarKey) { window.eliminarDeFirebase(_eliminarKey); _eliminarKey=null; }
+}
+function eliminarPiezaOLD(key) {
   const item=inventario.find(r=>r._key===key);
   if (item&&confirm('¿Eliminar "'+item.nombre+'"?')) window.eliminarDeFirebase(key);
 }
