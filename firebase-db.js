@@ -63,3 +63,18 @@ get(usuariosRef).then(snap => {
 });
 
 window.firebaseReady = true;
+
+const historialRef = ref(db, 'historial');
+
+window.guardarHistorialEnFirebase = function(entrada) {
+  push(historialRef, entrada);
+};
+
+window.cargarHistorialDesdeFirebase = function(callback) {
+  onValue(historialRef, (snapshot) => {
+    const data = snapshot.val();
+    const lista = data ? Object.entries(data).map(([k,v]) => ({...v, _key:k})) : [];
+    lista.sort((a,b) => new Date(b.fecha) - new Date(a.fecha));
+    callback(lista);
+  });
+};
