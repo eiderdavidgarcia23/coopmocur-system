@@ -78,3 +78,15 @@ window.cargarHistorialDesdeFirebase = function(callback) {
     callback(lista);
   });
 };
+
+const conductoresRef = ref(db, 'conductores');
+
+window.guardarConductorEnFirebase = (nuevo) => push(conductoresRef, nuevo);
+window.eliminarConductorDeFirebase = (key) => remove(ref(db, 'conductores/' + key));
+window.actualizarConductorEnFirebase = (key, cambios) => update(ref(db, 'conductores/' + key), cambios);
+
+onValue(conductoresRef, (snapshot) => {
+  const data = snapshot.val();
+  const lista = data ? Object.entries(data).map(([k,v]) => ({...v, _key:k})) : [];
+  if (window.actualizarConductoresDesdeFirebase) window.actualizarConductoresDesdeFirebase(lista);
+});

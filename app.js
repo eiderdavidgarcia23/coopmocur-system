@@ -291,3 +291,113 @@ window.actualizarInventarioDesdeFirebase=function(lista){
   inventario=lista;
   if (usuarioActual) renderizar();
 };
+
+// SIDEBAR
+let moduloActual='INVENTARIO';
+function abrirSidebar(){
+  document.getElementById('sidebar').classList.add('show');
+  document.getElementById('sidebar-overlay').classList.add('show');
+}
+function cerrarSidebar(){
+  document.getElementById('sidebar').classList.remove('show');
+  document.getElementById('sidebar-overlay').classList.remove('show');
+}
+function cambiarModulo(mod){
+  moduloActual=mod;
+  document.querySelectorAll('.sidebar-item').forEach(b=>b.classList.remove('active'));
+  event.target.classList.add('active');
+  cerrarSidebar();
+  const mt=document.getElementById('modulo-titulo');
+  if(mt) mt.textContent=mod;
+  const c=document.getElementById('contenido-principal');
+  const tabs=document.querySelector('.tabs');
+  if(mod==='PLANILLAS'){
+    if(tabs) tabs.style.display='none';
+    if(c) c.innerHTML=vistaPlanillas();
+  } else {
+    if(tabs) tabs.style.display='';
+    renderizar();
+  }
+}
+
+// ============ PLANILLAS / CONDUCTORES ============
+let conductores=[];
+
+window.actualizarConductoresDesdeFirebase=function(lista){
+  conductores=lista;
+  if(moduloActual==='PLANILLAS'){
+    const c=document.getElementById('contenido-principal');
+    if(c) c.innerHTML=vistaPlanillas();
+  }
+};
+
+function vistaPlanillas(){
+  const esAdmin = usuarioActual && usuarioActual.rol==='admin';
+  const filas = !conductores.length ? '<div class="empty"><div style="font-size:2.5rem;margin-bottom:8px">🧾</div><p style="font-size:0.9rem">No hay conductores registrados.</p></div>' :
+    conductores.map(cd=>{
+      const soatVencido = cd.soat && new Date(cd.soat) < new Date();
+      return '<div class="card"><div><div class="card-name">'+cd.nombre+'</div>'+
+        '<div style="font-size:0.85rem;color:#64748b;margin-top:4px">CC: '+cd.cedula+' · Tel: '+cd.telefono+'</div>'+
+        '<div style="font-size:0.85rem;color:#64748b">Motocarro: '+cd.motocarro+'</div>'+
+        '<div style="font-size:0.85rem;color:#64748b">'+cd.correo+'</div>'+
+        '<div style="font-size:0.85rem;margin-top:4px"'+(soatVencido?' style="color:#dc2626;font-weight:700"':'')+'>SOAT: '+(cd.soat||'-')+(soatVencido?' ⚠️ VENCIDO':'')+'</div></div>'+
+    (esAdmin?'<div class="card-actions"><button class="btn-edit" onclick="abrirModalConductor(\''+cd._key+'\')">✏️</button><button class="btn-del" onclick="abrirModalEliminarConductor(\''+cd._key+'\')">🗑️</button></div>':'')+
+        '</div>';
+    }).join('');
+  return '<div class="fade"><div class="top-bar"><div class="section-title">🧾 PLANILLAS</div>'+
+    '<div class="section-sub">'+conductores.length+' conductor(es)</div></div>'+
+    (esAdmin?'<button class="btn btn-green" onclick="abrirModalConductor()">+ Agregar</button>':'')+
+    '</div><div id="lista-conductores">'+filas+'</div></div>';
+}
+
+function abrirModalConductor(key){
+  document.getElementById('conductor-key').value=key||'';
+  if(key){
+    const cd=conductores.find(c=>c._key===key);
+    document.getElementById('conductor-modal-titulo').textContent='✏️ Editar Conductor';
+    document.getElementById('conductor-nombre').value=cd.nombre||'';
+    document.getElementById('conductor-cedula').value=cd.cedula||'';
+    document.getElementById('conductor-telefono').value=cd.telefono||'';
+    document.getElementById('conductor-motocarro').value=cd.motocarro||'';
+    document.getElementById('conductor-correo').value=cd.correo||'';
+    document.getElementById('conductor-soat').value=cd.soat||'';
+  } else {
+    document.getElementById('conductor-modal-titulo').textContent='👤 Nuevo Conductor';
+    ['conductor-nombre','conductor-cedula','conductor-telefono','conductor-motocarro','conductor-correo','conductor-soat'].forEach(id=>document.getElementById(id).value='');
+  }
+  document.getElementById('modal-conductor').classList.add('visible');
+}
+function cerrarModalConductor(){
+  document.getElementById('modal-conductor').classList.remove('visible');
+}
+function procesarGuardarConductor(){
+  const key=document.getElementById('conductor-key').value;
+  const datos={
+    nombre:document.getElementById('conductor-nombre').value.trim(),
+    cedula:document.getElementById('conductor-cedula').value.trim(),
+    telefono:document.getElementById('conductor-telefono').value.trim(),
+    motocarro:document.getElementById('conductor-motocarro').value.trim(),
+    correo:document.getElementById('conductor-correo').value.trim(),
+    soat:document.getElementById('conductor-soat').value
+  };
+  if(!datos.nombre||!datos.cedula){ mostrarToast('Nombre y cédula son obligatorios'); return; }
+  if(key){
+    window.actualizarConductorEnFirebase(key, datos);
+  } else {
+    window.guardarConductorEnFirebase(datos);
+  }
+  cerrarModalConductor();
+  mostrarToast('Conductor guardado');
+}
+let _keyEliminarConductor=null;
+function abrirModalEliminarConductor(key){
+  _keyEliminarConductor=key;
+  const cd=conductores.find(c=>c._key===key);
+  document.getElementById('eliminar-conductor-nombre-texto').textContent=cd?cd.nombre:'';
+  document.getElementById('modal-eliminar-conductor').classList.add('visible');
+}
+function confirmarEliminarConductor(){
+  if(_keyEliminarConductor) window.eliminarConductorDeFirebase(_keyEliminarConductor);
+  document.getElementById('modal-eliminar-conductor').classList.remove('visible');
+  mostrarToast('Conductor eliminado');
+}

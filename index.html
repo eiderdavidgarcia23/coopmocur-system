@@ -8,6 +8,19 @@
 </head>
 <body>
 
+<!-- SIDEBAR -->
+<div id="sidebar-overlay" class="sidebar-overlay" onclick="cerrarSidebar()"></div>
+<div id="sidebar" class="sidebar">
+  <div class="sidebar-header">
+    <h2>COOPMOCUR</h2>
+    <button class="sidebar-close" onclick="cerrarSidebar()">✕</button>
+  </div>
+  <div class="sidebar-menu">
+    <button class="sidebar-item active" onclick="cambiarModulo('INVENTARIO')">📦 Inventario</button>
+    <button class="sidebar-item" onclick="cambiarModulo('PLANILLAS')">🧾 Planillas</button>
+  </div>
+</div>
+
 <!-- CARGANDO -->
 <div id="pantalla-cargando" class="loading-screen">
   <div class="spinner"></div>
@@ -44,8 +57,9 @@
 <div id="pantalla-app" style="display:none">
   <div class="header">
     <div class="header-left">
-      <h1>🛺 COOPMOCUR</h1>
-      <p>MÓDULO INTEGRAL DE REPUESTOS</p>
+        <button class="hamburger-btn" onclick="abrirSidebar()">☰</button>
+        <h1>COOPMOCUR</h1>
+        <p id="modulo-titulo">INVENTARIO</p>
     </div>
     <div class="header-right">
       <span class="header-user" id="header-usuario"></span>
@@ -106,6 +120,36 @@
 </div>
 
 <!-- MODAL CREAR USUARIO -->
+<!-- MODAL CONDUCTOR (PLANILLAS) -->
+<div class="modal-overlay" id="modal-conductor">
+  <div class="modal">
+    <h3 id="conductor-modal-titulo">👤 Nuevo Conductor</h3>
+    <input type="hidden" id="conductor-key">
+    <div class="form-group"><label class="form-label">Nombre</label><input type="text" id="conductor-nombre" class="form-input"></div>
+    <div class="form-group"><label class="form-label">Cédula</label><input type="text" id="conductor-cedula" class="form-input"></div>
+    <div class="form-group"><label class="form-label">Teléfono</label><input type="text" id="conductor-telefono" class="form-input"></div>
+    <div class="form-group"><label class="form-label">Número de motocarro</label><input type="text" id="conductor-motocarro" class="form-input"></div>
+    <div class="form-group"><label class="form-label">Correo electrónico</label><input type="email" id="conductor-correo" class="form-input"></div>
+    <div class="form-group"><label class="form-label">Fecha vencimiento SOAT</label><input type="date" id="conductor-soat" class="form-input"></div>
+    <div class="btn-row">
+      <button class="btn btn-gray" onclick="cerrarModalConductor()">Cancelar</button>
+      <button class="btn btn-blue" onclick="procesarGuardarConductor()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL ELIMINAR CONDUCTOR -->
+<div class="modal-overlay" id="modal-eliminar-conductor">
+  <div class="modal" style="text-align:center">
+    <h3 style="margin-bottom:8px">¿Eliminar conductor?</h3>
+    <p style="font-size:0.85rem;color:#64748b;margin-bottom:20px" id="eliminar-conductor-nombre-texto"></p>
+    <div class="btn-row">
+      <button class="btn btn-gray" onclick="document.getElementById('modal-eliminar-conductor').classList.remove('visible')">Cancelar</button>
+      <button class="btn btn-red" onclick="confirmarEliminarConductor()" style="background:#ef4444;color:#fff">Eliminar</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-usuario">
   <div class="modal">
     <h3>👤 Crear Nuevo Usuario</h3>
